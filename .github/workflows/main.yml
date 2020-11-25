@@ -1,8 +1,10 @@
 name: Publish
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   release:
@@ -28,7 +30,7 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 3.1.101
+          dotnet-version: 5.0.100
 
       - name: Build
         shell: bash
@@ -39,7 +41,7 @@ jobs:
           # Pack files
           if [ "${{ matrix.target }}" == "win-x64" ]; then
             # Pack to zip for Windows
-            7z a -tzip "${release_name}.zip" "./${release_name}/*"
+            7z a -tzip "${release_name}.zip"  "./${release_name}/*"
           else
           tar czvf "${release_name}.tar.gz" "$release_name"
           fi
@@ -49,5 +51,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: "certificate-tools*"
+          tag_name: build
         env:
           GITHUB_TOKEN: ${{ secrets.SECRET }}
