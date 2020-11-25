@@ -6,7 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace certificate_tools
 {
-    [Description("Verify certificate")]
+    [Description("Verify certificate chain")]
     public class VerifyCertificate
     {
         [Description("Certificate file")]
