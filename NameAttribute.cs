@@ -8,6 +8,7 @@ namespace certificate_tools
         {
             Name = name;
         }
+
         public string Name { get; }
     }
 }
