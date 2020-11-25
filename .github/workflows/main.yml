@@ -35,7 +35,7 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          release_name="certificate-tools-${process.env.NEXT_VERSION}-${{ matrix.target }}"
+          release_name="certificate-tools-${{ matrix.target }}"
           # Build everything
           dotnet publish --runtime "${{ matrix.target }}" -c Release -o "$release_name"
           # Pack files
