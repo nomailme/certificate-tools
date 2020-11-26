@@ -1,5 +1,6 @@
 # certificate-tools
 
+```
 Usage:
   certificate-tools [options] [command]
 
@@ -11,3 +12,4 @@ Commands:
   match     Verify that key and certificate matches
   verify    Verify certificate
 
+```
