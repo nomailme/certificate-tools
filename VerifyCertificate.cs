@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 
 namespace certificate_tools
@@ -19,8 +21,17 @@ namespace certificate_tools
             try
             {
                 var loadedCertificates = File.ReadAllText(Certificate);
-                X509Certificate2 certificate = LoadPemFile(loadedCertificates)[0];
-                return certificate.Verify();
+                var certificateCollection = LoadPemFile(loadedCertificates);
+                var certificate = certificateCollection[0];
+                IEnumerable<X509Certificate2> intermediateCertificates =
+                    GetIntermediateCertificates(certificateCollection);
+
+                X509Chain chain2 = new X509Chain();
+                chain2.ChainPolicy.ExtraStore.AddRange(intermediateCertificates.ToArray());
+                // This setup does not have revocation information
+                chain2.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+                var isValid = chain2.Build(certificate);
+                return isValid;
             }
             catch (ArgumentOutOfRangeException)
             {
@@ -33,6 +44,18 @@ namespace certificate_tools
             var certificateCollection = new X509Certificate2Collection();
             certificateCollection.ImportFromPem(data);
             return certificateCollection;
+        }
+
+        private static IEnumerable<X509Certificate2> GetIntermediateCertificates(
+            X509Certificate2Collection certificateCollection)
+        {
+            if (certificateCollection.Count > 1)
+            {
+                for (int i = 1; i < certificateCollection.Count - 1; i++)
+                {
+                    yield return certificateCollection[i];
+                }
+            }
         }
     }
 }
