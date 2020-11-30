@@ -9,13 +9,12 @@ namespace certificate_tools
         {
             var rootCommand = new RootCommand();
 
-            var matchCommand = new Command("match").ConfigureFromClass<MatchKeyAndCertificate>(command =>
+            rootCommand.AddChild<MatchKeyAndCertificate>("match", command =>
                 Console.WriteLine("Match: {0}", command.AreValid().ToString()));
-            var verifyCommand = new Command("verify").ConfigureFromClass<VerifyCertificate>(command =>
-                Console.WriteLine("Verification successful: {0}", command.IsValid().ToString()));
 
-            rootCommand.AddCommand(matchCommand);
-            rootCommand.AddCommand(verifyCommand);
+            rootCommand.AddChild<ChainVerificationCommand>("verify", command =>
+                Console.WriteLine("Valid: {0}", command.IsValid().ToString()));
+
             rootCommand.Invoke(args);
         }
     }

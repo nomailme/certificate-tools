@@ -11,9 +11,10 @@ namespace certificate_tools
 {
     public static class CommandExtensions
     {
-        public static Command ConfigureFromClass<T>(this Command command, Action<T> execute)
+        public static Command AddChild<T>(this Command rootCommand, string commandName, Action<T> execute)
             where T : new()
         {
+            var command = new Command(commandName);
             var commandType = typeof(T);
 
             command.Description = commandType
@@ -48,6 +49,7 @@ namespace certificate_tools
                 modelBinder.UpdateInstance(cmd, context.BindingContext);
                 execute(cmd);
             });
+            rootCommand.AddCommand(command);
             return command;
         }
 

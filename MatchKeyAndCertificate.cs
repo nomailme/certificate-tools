@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CommandLine;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
@@ -13,27 +14,25 @@ namespace certificate_tools
         [Description("Certificate file")]
         [Name("certificate")]
         [Required]
-        public string Certificate { get; set; }
+        public FileInfo Certificate { get; set; }
 
         [Description("Key file")]
         [Name("key")]
         [Required]
-        public string Key { get; set; }
+        public FileInfo Key { get; set; }
+
+        public void Do(RootCommand rootCommand)
+        {
+
+        }
 
         public bool AreValid()
         {
-            X509Certificate2 certificate = LoadPemFile(File.ReadAllText(Certificate))[0];
+            X509Certificate2 certificate = PemTools.LoadFromPemFile(Certificate).First();
             var rsa = RSA.Create();
-            rsa.ImportFromPem(File.ReadAllText(Key));
+            rsa.ImportFromPem(File.ReadAllText(Key.FullName));
             certificate.CopyWithPrivateKey(rsa);
             return true;
-        }
-
-        public X509Certificate2Collection LoadPemFile(ReadOnlySpan<char> data)
-        {
-            var certificateCollection = new X509Certificate2Collection();
-            certificateCollection.ImportFromPem(data);
-            return certificateCollection;
         }
     }
 }
