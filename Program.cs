@@ -1,5 +1,6 @@
 ﻿using System;
 using System.CommandLine;
+using Spectre.Console;
 
 namespace certificate_tools
 {
@@ -9,11 +10,8 @@ namespace certificate_tools
         {
             var rootCommand = new RootCommand();
 
-            rootCommand.AddChild<MatchKeyAndCertificate>("match", command =>
-                Console.WriteLine("Match: {0}", command.AreValid().ToString()));
-
-            rootCommand.AddChild<ChainVerificationCommand>("verify", command =>
-                Console.WriteLine("Valid: {0}", command.IsValid().ToString()));
+            rootCommand.AddChild<MatchKeyAndCertificate>("match", AnsiConsole.Console);
+            rootCommand.AddChild<ChainVerificationCommand>("verify", AnsiConsole.Console);
 
             rootCommand.Invoke(args);
         }

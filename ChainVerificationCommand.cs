@@ -1,77 +1,92 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using Spectre.Console;
 
 namespace certificate_tools
 {
     [Description("Verify certificate chain")]
-    public class ChainVerificationCommand
+    public class ChainVerificationCommand : IConsoleCommand
     {
+        private readonly string[] certificateExtensions = { ".crt", ".pem" };
+
+        [Description("Directory that contains root certificates")]
+        [Name("ca")]
+        public DirectoryInfo Ca { get; set; }
+
         [Description("Certificate file")]
         [Name("certificate")]
         [Required]
         public FileInfo Certificate { get; set; }
 
-        [Description("Directory that contains root certificates")]
-        [Name("ca")]
-        [Required]
-        public DirectoryInfo Ca { get; set; }
+        [Description("Use system certificate store")]
+        [Name("nostore")]
+        public bool DoNotUseSystemCertificateStore { get; set; }
 
-        public bool IsValid()
+        public void Do(IAnsiConsole console)
+        {
+            var result = IsValid();
+            var resultMessage = result.IsValid switch
+            {
+                true => "Result: [green]ok[/]",
+                false => $"Result: [red]fail[/]{Environment.NewLine}Error: {GetError(result)}"
+            };
+
+            console.MarkupLine(resultMessage);
+        }
+
+        private string GetError((bool isValid, List<X509ChainStatus> chainStatuses) result)
+        {
+            StringBuilder builder = new StringBuilder();
+            result.chainStatuses.ForEach(x => builder.AppendLine($"{x.StatusInformation}"));
+            return builder.ToString();
+        }
+
+        private (bool IsValid, List<X509ChainStatus> ChainStatuses) IsValid()
         {
             try
             {
-                var certificateCollection = PemTools.LoadFromPemFile(Certificate);
+                var certificateCollection = PemTools.LoadCeretificateFromPemFile(Certificate);
                 var certificate = certificateCollection.First();
                 if (certificate == null)
                 {
                     throw new ArgumentException("Unable to load certificate");
                 }
 
-                var intermediateCertificates = certificateCollection.Skip(1);
+                var trustMode = DoNotUseSystemCertificateStore
+                    ? X509ChainTrustMode.CustomRootTrust
+                    : X509ChainTrustMode.System;
 
-                X509CertificateCollection rootCertificates = new X509CertificateCollection();
-                if (Ca != null)
-                {
-                    var files = Ca.EnumerateFileSystemInfos("*", SearchOption.AllDirectories)
-                        .ToList();
-                    if (files.Count > 2000)
-                    {
-                        throw new ArgumentException("Root directory cannot contain more than 2000 files");
-                    }
-
-                    foreach (var file in files)
-                    {
-                        if (file.Extension is ".crt" or ".pem")
-                        {
-                            var certificates = PemTools.LoadFromPemFile(file);
-                            certificates.OfType<X509Certificate2>().Where(x=>x.Issuer==x.Subject).ToList().ForEach(x => rootCertificates.Add(x));
-                        }
-                    }
-                }
-                var rootsLookup = rootCertificates
-                    .OfType<X509Certificate2>()
-                    .GroupBy(x => x.Thumbprint)
-                    .Select(x => x.First());
-
-
-                X509Chain chain2 = new X509Chain
+                X509Chain chain = new X509Chain
                 {
                     ChainPolicy =
                     {
-                        TrustMode = X509ChainTrustMode.CustomRootTrust,
+                        TrustMode = trustMode,
                         RevocationMode = X509RevocationMode.NoCheck,
                         VerificationFlags = X509VerificationFlags.NoFlag
                     }
                 };
 
-                chain2.ChainPolicy.CustomTrustStore.AddRange(rootsLookup.ToArray());
+                var intermediateCertificates = certificateCollection.Skip(1);
 
-                var isValid = chain2.Build(certificate);
-                return isValid;
+                Ca?.EnumerateFileSystemInfos("*", SearchOption.TopDirectoryOnly)
+                    .Where(x => certificateExtensions.Contains(x.Extension))
+                    .Select(PemTools.LoadCeretificateFromPemFile)
+                    .SelectMany(x => x.OfType<X509Certificate2>())
+                    .Where(x => string.Equals(x.Issuer, x.Subject))
+                    .GroupBy(x => x.Thumbprint)
+                    .Select(x => x.First())
+                    .ToList()
+                    .ForEach(x => chain.ChainPolicy.CustomTrustStore.Add(x));
+
+                chain.ChainPolicy.ExtraStore.AddRange(intermediateCertificates);
+                var isValid = chain.Build(certificate);
+                return (isValid, chain.ChainStatus.ToList());
             }
             catch (ArgumentOutOfRangeException)
             {

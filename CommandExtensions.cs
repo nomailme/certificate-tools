@@ -6,13 +6,14 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
+using Spectre.Console;
 
 namespace certificate_tools
 {
     public static class CommandExtensions
     {
-        public static Command AddChild<T>(this Command rootCommand, string commandName, Action<T> execute)
-            where T : new()
+        public static Command AddChild<T>(this Command rootCommand, string commandName, IAnsiConsole console)
+            where T : IConsoleCommand, new()
         {
             var command = new Command(commandName);
             var commandType = typeof(T);
@@ -47,7 +48,7 @@ namespace certificate_tools
                 var modelBinder = new ModelBinder<T>();
                 var cmd = new T();
                 modelBinder.UpdateInstance(cmd, context.BindingContext);
-                execute(cmd);
+                cmd.Do(console);
             });
             rootCommand.AddCommand(command);
             return command;

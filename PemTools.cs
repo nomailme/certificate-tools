@@ -6,7 +6,7 @@ namespace certificate_tools
 {
     public static class PemTools
     {
-        public static X509Certificate2Collection LoadFromPemFile(FileInfo filePath)
+        public static X509Certificate2Collection LoadCeretificateFromPemFile(FileInfo filePath)
         {
             var rawData = File.ReadAllText(filePath.FullName);
             var certificateCollection = new X509Certificate2Collection();
@@ -14,9 +14,9 @@ namespace certificate_tools
             return certificateCollection;
         }
 
-        public static X509Certificate2Collection LoadFromPemFile(FileSystemInfo filePath)
+        public static X509Certificate2Collection LoadCeretificateFromPemFile(FileSystemInfo filePath)
         {
-            return LoadFromPemFile(new FileInfo(filePath.FullName));
+            return LoadCeretificateFromPemFile(new FileInfo(filePath.FullName));
         }
     }
 }
